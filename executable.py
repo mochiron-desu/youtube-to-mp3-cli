@@ -6,15 +6,19 @@ import subprocess
 import platform
 import time
 import threading
-import winreg
 from pydub import AudioSegment
 
-def get_windows_downloads_path():
-    try:
-        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r'SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders') as key:
-            downloads_path = winreg.QueryValueEx(key, '{374DE290-123F-4565-9164-39C4925E467B}')[0]
-        return downloads_path
-    except:
+# Define a function to get the default download path based on the operating system
+def get_default_downloads_path():
+    if platform.system() == 'Windows':
+        try:
+            import winreg
+            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r'SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders') as key:
+                downloads_path = winreg.QueryValueEx(key, '{374DE290-123F-4565-9164-39C4925E467B}')[0]
+            return downloads_path
+        except:
+            return os.path.join(os.path.expanduser('~'), 'Downloads')
+    else:
         return os.path.join(os.path.expanduser('~'), 'Downloads')
 
 def generate_unique_filename(directory, filename):
@@ -97,7 +101,7 @@ class YouTubeDownloaderGUI:
 
         self.path_entry = tk.Entry(master, width=50)
         self.path_entry.pack(pady=5)
-        self.path_entry.insert(0, get_windows_downloads_path())
+        self.path_entry.insert(0, get_default_downloads_path())
 
         self.browse_button = tk.Button(master, text="Browse", command=self.browse_path)
         self.browse_button.pack(pady=5)
@@ -172,7 +176,9 @@ class YouTubeDownloaderGUI:
             filename = download_video_as_mp3(url, path, update_status, trim, start_time, end_time)
             self.master.after(0, lambda: self.download_complete(filename))
         except Exception as e:
-            self.master.after(0, lambda: self.download_error(str(e)))
+            # Properly pass the exception message to the error handling function
+            self.master.after(0, lambda e=e: self.download_error(str(e)))
+
 
     def download_complete(self, filename):
         self.status_label.config(text="Download complete!")
